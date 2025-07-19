@@ -4,7 +4,7 @@ import { AppContext } from "../context/AppContext";
 
 const { Option } = Select;
 
-const AdminPage = () => {
+const AdminPage = ({loggedInUser}) => {
   const { users, setUsers } = useContext(AppContext);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newUser, setNewUser] = useState({ name: "", role: "Developer" });
@@ -24,7 +24,7 @@ const AdminPage = () => {
   return (
     <div style={{ padding: 20 }}>
       <h2>Admin - Manage Users</h2>
-      <Button type="primary" onClick={() => setIsModalOpen(true)}>
+      <Button type="primary" onClick={() => setIsModalOpen(true)} disabled={loggedInUser!=="alice"}>
         Add User
       </Button>
       <Table
