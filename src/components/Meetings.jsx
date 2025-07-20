@@ -1,6 +1,6 @@
 // src/pages/Meetings.jsx
-import React from "react";
-import { Table, Tag, Collapse, Card } from "antd";
+import React, { useState, useMemo } from "react";
+import { Table, Tag, Collapse, Card, DatePicker, Button } from "antd";
 import dayjs from "dayjs";
 
 const { Panel } = Collapse;
@@ -70,9 +70,13 @@ const renderTasks = (tasks) => {
         <strong>{task.name}</strong>
         <Tag color={priorityColors[task.priority]}>P{task.priority}</Tag>
       </div>
-      <p style={{ margin: "4px 0" }}>Owner: <strong>{task.owner}</strong></p>
+      <p style={{ margin: "4px 0" }}>
+        Owner: <strong>{task.owner}</strong>
+      </p>
       {task.completedAt ? (
-        <Tag color="green">Completed At: {dayjs(task.completedAt).format("DD MMM YYYY")}</Tag>
+        <Tag color="green">
+          Completed At: {dayjs(task.completedAt).format("DD MMM YYYY")}
+        </Tag>
       ) : (
         <Tag color="blue">Due: {dayjs(task.dueDate).format("DD MMM YYYY")}</Tag>
       )}
@@ -86,6 +90,19 @@ const renderTasks = (tasks) => {
 };
 
 const Meetings = () => {
+  const [selectedDate, setSelectedDate] = useState(null);
+
+  // Filtered meetings based on selected date
+  const filteredMeetings = useMemo(() => {
+    if (!selectedDate) return meetings;
+    return meetings.filter((meeting) =>
+      dayjs(meeting.dateTime, "YYYY-MM-DD hh:mm A").isSame(
+        selectedDate,
+        "day"
+      )
+    );
+  }, [selectedDate]);
+
   const columns = [
     {
       title: "Meeting Date & Time",
@@ -101,12 +118,27 @@ const Meetings = () => {
     }
   ];
 
+  const clearDate = () => setSelectedDate(null);
+
   return (
     <div style={{ padding: 20 }}>
       <h2>Meetings</h2>
+
+      {/* Date Picker for filtering */}
+      <div style={{ marginBottom: 20, display: "flex", gap: "10px" }}>
+        <DatePicker
+          value={selectedDate}
+          onChange={(date) => setSelectedDate(date)}
+          placeholder="Select meeting date"
+        />
+        {selectedDate && (
+          <Button onClick={clearDate}>Clear Filter</Button>
+        )}
+      </div>
+
       <Table
         columns={columns}
-        dataSource={meetings}
+        dataSource={filteredMeetings}
         pagination={false}
         bordered
       />

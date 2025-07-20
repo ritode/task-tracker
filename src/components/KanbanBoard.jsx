@@ -2,8 +2,11 @@ import React, { useContext, useState } from "react";
 import Board from "@asseinfo/react-kanban";
 import "@asseinfo/react-kanban/dist/styles.css";
 import { AppContext } from "../context/AppContext";
-import { Card, Tag, Collapse, Select } from "antd";
+import { Card, Tag, Collapse, Select, DatePicker, Button } from "antd";
 import dayjs from "dayjs";
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+
+dayjs.extend(isSameOrBefore); 
 
 const { Panel } = Collapse;
 const { Option } = Select;
@@ -11,13 +14,15 @@ const { Option } = Select;
 const priorityColors = {
   1: "red",
   2: "orange",
-  3: "green"
+  3: "green",
 };
 
 const KanbanBoard = () => {
   const { board, setBoard, users } = useContext(AppContext);
   const [selectedOwner, setSelectedOwner] = useState(null);
   const [selectedPriority, setSelectedPriority] = useState(null);
+  const [selectedDueFilter, setSelectedDueFilter] = useState(null);
+  const [specificDate, setSpecificDate] = useState(null);
 
   const handleCardMove = (newBoard, card, source, destination) => {
     // If moved to Done, set completed date
@@ -35,10 +40,34 @@ const KanbanBoard = () => {
     setBoard(newBoard);
   };
 
+  const matchesDueDateFilter = (task) => {
+    if (!selectedDueFilter || !task.dueDate) return true;
+    const due = dayjs(task.dueDate);
+    const today = dayjs();
+
+    switch (selectedDueFilter) {
+      case "today":
+        return due.isSame(today, "day");
+
+      case "this_week":
+        return due.isSameOrBefore(today.endOf("week"));
+
+      case "this_month":
+        return due.isSameOrBefore(today.endOf("month"));
+
+      case "specific_date":
+        return specificDate ? due.isSameOrBefore(dayjs(specificDate), "day") : true;
+
+      default:
+        return true;
+    }
+  };
+
   const renderCard = (task) => {
-    // Apply filters here
+    // Apply filters
     if (selectedOwner && task.owner !== selectedOwner) return null;
     if (selectedPriority && task.priority !== selectedPriority) return null;
+    if (!matchesDueDateFilter(task)) return null;
 
     const today = dayjs();
     const overdue = task.dueDate && today.isAfter(dayjs(task.dueDate));
@@ -77,12 +106,20 @@ const KanbanBoard = () => {
     );
   };
 
+  const clearAllFilters = () => {
+    setSelectedOwner(null);
+    setSelectedPriority(null);
+    setSelectedDueFilter(null);
+    setSpecificDate(null);
+  };
+
   return (
     <div style={{ padding: "20px" }}>
       <h2>Task Tracker</h2>
 
       {/* Filter Dropdowns */}
-      <div style={{ marginBottom: 20, display: "flex", gap: "10px" }}>
+      <div style={{ marginBottom: 20, display: "flex", gap: "10px", flexWrap: "wrap" }}>
+        {/* Owner Filter */}
         <Select
           allowClear
           style={{ width: 200 }}
@@ -97,6 +134,7 @@ const KanbanBoard = () => {
           ))}
         </Select>
 
+        {/* Priority Filter */}
         <Select
           allowClear
           style={{ width: 200 }}
@@ -110,14 +148,40 @@ const KanbanBoard = () => {
             </Option>
           ))}
         </Select>
+
+        {/* Due Date Filter */}
+        <Select
+          allowClear
+          style={{ width: 200 }}
+          placeholder="Filter by due date"
+          value={selectedDueFilter}
+          onChange={(value) => {
+            setSelectedDueFilter(value);
+            if (value !== "specific_date") setSpecificDate(null);
+          }}
+        >
+          <Option value="today">Today</Option>
+          <Option value="this_week">This Week</Option>
+          <Option value="this_month">This Month</Option>
+          <Option value="specific_date">Select Date...</Option>
+        </Select>
+
+        {selectedDueFilter === "specific_date" && (
+          <DatePicker
+            style={{ width: 200 }}
+            value={specificDate ? dayjs(specificDate) : null}
+            onChange={(date) => setSpecificDate(date)}
+            placeholder="Select a date"
+          />
+        )}
+
+        {/* Clear Filters Button */}
+        <Button onClick={clearAllFilters}>Clear All Filters</Button>
       </div>
 
-      <Board
-        disableColumnDrag
-        onCardDragEnd={handleCardMove}
-        renderCard={renderCard}
-        initialBoard={board}
-      />
+      <Board disableColumnDrag onCardDragEnd={handleCardMove} renderCard={renderCard}>
+        {board}
+      </Board>
     </div>
   );
 };
