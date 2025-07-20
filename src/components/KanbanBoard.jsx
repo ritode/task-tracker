@@ -1,4 +1,4 @@
-import React, { useContext, useState, useMemo } from "react";
+import React, { useContext, useState } from "react";
 import Board from "@asseinfo/react-kanban";
 import "@asseinfo/react-kanban/dist/styles.css";
 import { AppContext } from "../context/AppContext";
@@ -19,22 +19,8 @@ const KanbanBoard = () => {
   const [selectedOwner, setSelectedOwner] = useState(null);
   const [selectedPriority, setSelectedPriority] = useState(null);
 
-  // Filtered board based on selected owner and priority
-  const filteredBoard = useMemo(() => {
-    return {
-      ...board,
-      columns: board.columns.map((col) => ({
-        ...col,
-        cards: col.cards.filter((card) => {
-          const ownerMatch = selectedOwner ? card.owner === selectedOwner : true;
-          const priorityMatch = selectedPriority ? card.priority === selectedPriority : true;
-          return ownerMatch && priorityMatch;
-        }),
-      })),
-    };
-  }, [selectedOwner, selectedPriority, board]);
-
   const handleCardMove = (newBoard, card, source, destination) => {
+    // If moved to Done, set completed date
     if (destination.toColumnId === 3) {
       const doneColumn = newBoard.columns.find(
         (col) => col.id === destination.toColumnId
@@ -50,12 +36,16 @@ const KanbanBoard = () => {
   };
 
   const renderCard = (task) => {
+    // Apply filters here
+    if (selectedOwner && task.owner !== selectedOwner) return null;
+    if (selectedPriority && task.priority !== selectedPriority) return null;
+
     const today = dayjs();
     const overdue = task.dueDate && today.isAfter(dayjs(task.dueDate));
     const dueSoon = task.dueDate && dayjs(task.dueDate).diff(today, "days") <= 2;
 
     return (
-      <Card size="small" style={{ marginBottom: "8px", minWidth:'255px' }}>
+      <Card size="small" style={{ marginBottom: "8px", minWidth: "255px" }}>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <strong>{task.name}</strong>
           <Tag color={priorityColors[task.priority]}>P{task.priority}</Tag>
@@ -126,9 +116,8 @@ const KanbanBoard = () => {
         disableColumnDrag
         onCardDragEnd={handleCardMove}
         renderCard={renderCard}
-      >
-        {filteredBoard}
-      </Board>
+        initialBoard={board}
+      />
     </div>
   );
 };
